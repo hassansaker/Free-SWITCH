@@ -73,6 +73,9 @@ sudo dnf install -y sofia-sip-devel
 sudo dnf install -y ldns ldns-devel # install ldns runtime + headers on Fedora
 sudo dnf install -y ffmpeg-free ffmpeg-free-devel #FFmpeg dev headers (libavformat + libswscale).
 sudo dnf install -y sqlite sqlite-devel
+sudo apt install -y libpq-dev 
+sudo dnf install -y postgresql-devel
+sudo dnf install -y lua-devel
 
 
 ```
@@ -102,8 +105,7 @@ pkg-config --modversion spandsp     # expect 3.0.0 (or 3.0.0+git)
 cd /usr/local/src
 sudo git clone https://github.com/signalwire/freeswitch.git
 cd freeswitch
-# Use the latest 1.10.x tag; example:
-sudo git checkout v1.10.12
+git config pull.rebase true
 ```
 ## 5) Configure, Build, Install
 ```bash
@@ -111,16 +113,11 @@ sudo git checkout v1.10.12
 sudo ./bootstrap.sh -j
 
 # Configure (enable common DB backends)
-sudo ./configure -C \
-  --enable-core-odbc-support \
-  --enable-core-pgsql-support
+sudo ./configure 
 
 # Build and install
 sudo make -j"$(nproc)"
 sudo make install
-
-# Install default XML config
-sudo make samples
 
 # Install English prompts & MOH (adjust quality tiers as you like)
 sudo make cd-sounds-install cd-moh-install
