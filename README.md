@@ -18,18 +18,7 @@ This guide gets you a working FreeSWITCH 1.10.x with sample configs, sounds, a s
 - [5) Configure, Build, Install](#5-configure-build-install)
 - [6) Create Service User & Permissions](#6-create-service-user--permissions)
 - [7) Systemd Service](#7-systemd-service)
-- [8) Firewall (firewalld)](#8-firewall-firewalld)
-- [9) SELinux (Enforcing) Notes](#9-selinux-enforcing-notes)
-- [10) Verify](#10-verify)
-- [Optional Libraries / Modules](#optional-libraries--modules)
-  - [SQLite (required)](#sqlite-required)
-  - [FFmpeg for `mod_av` (video)](#ffmpeg-for-mod_av-video)
-  - [Lua / LuaJIT for `mod_lua`](#lua--luajit-for-mod_lua)
-  - [ldns for `mod_enum`](#ldns-for-mod_enum)
-  - [Other optional libs (png, freetype2, gumbo, libfvad, tpl)](#other-optional-libs-png-freetype2-gumbo-libfvad-tpl)
-- [Troubleshooting Cheatsheet](#troubleshooting-cheatsheet)
-- [Uninstall / Revert](#uninstall--revert)
-- [FAQ](#faq)
+
 
 ---
 
@@ -111,17 +100,62 @@ git config pull.rebase true
 ```bash
 # Autotools
 sudo ./bootstrap.sh -j
-
 # Configure (enable common DB backends)
 sudo ./configure 
-
 # Build and install
 sudo make -j"$(nproc)"
 sudo make install
-
+sudo ldconfig
 # Install English prompts & MOH (adjust quality tiers as you like)
 sudo make cd-sounds-install cd-moh-install
 ```
 
+## 6) Create Service User & Permissions
+Set Owner and Permissions
+```bash
+cd /usr/local
+sudo groupadd freeswitch
+sudo chown -R $USER:freeswitch freeswitch/
+```
+## 7) Systemd Service
+systemd is the service management system that replaces System V init. It is quite thorough and requires much simpler configuration scripts called Unit Files. systemd can start FreeSWITCH™ at boot time, monitor the application, restart it if it fails, and take other useful actions.
+sudo nano /etc/systemd/system/freeswitch.service
 
+```bash
+[Service]
+; service
+Type=forking
+PIDFile=/usr/local/freeswitch/run/freeswitch.pid
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /usr/local/freeswitch/run
+ExecStartPre=/bin/chown $USER:freeswitch /usr/local/freeswitch/run
+ExecStart=/usr/local/freeswitch/bin/freeswitch 
+TimeoutSec=45s
+Restart=always
+; exec
+WorkingDirectory=/usr/local/freeswitch/run
+User=$USER
+Group=freeswitch
+LimitCORE=infinity
+LimitNOFILE=100000
+LimitNPROC=60000
+;LimitSTACK=240
+LimitRTPRIO=infinity
+LimitRTTIME=7000000
+IOSchedulingClass=realtime
+IOSchedulingPriority=2
+CPUSchedulingPolicy=rr
+CPUSchedulingPriority=89
+UMask=0007
 
+[Install]
+WantedBy=multi-user.target
+```
+Now run the service
+```bash
+sudo systemctl daemon-reload
+sudo systemctl reset-failed freeswitch.service #optional when there is a crash with the service
+sudo systemctl enable freeswitch
+sudo systemctl start freeswitch
+
+```
